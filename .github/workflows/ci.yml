@@ -27,11 +27,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run Tests
-        run: npm test
-
       - name: Build Extension
         run: npm run build
+
+      - name: Run Tests
+        run: npm test
 
       - name: Create Distribution Package
         run: npm run dist
