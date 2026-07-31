@@ -382,3 +382,37 @@ chrome.storage.sync.get(["AmnGaze-settings", "amngaze-settings"], (res) => {
         ensureOffscreenDocument();
     }
 });
+
+// Optional Guardian Desktop Sync (Silent 100% standalone fallback)
+const GUARDIAN_API = "http://127.0.0.1:48192/status";
+async function syncWithAmnShieldGuardian() {
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(GUARDIAN_API, { signal: controller.signal });
+        clearTimeout(timer);
+        if (!res.ok) return;
+        const status = await res.json();
+        if (status && status.focus_mode_active) {
+            // Activate strict visual blur mode when Windows Guardian has Focus Mode active
+            chrome.storage.sync.get([SETTINGS_KEY], (stored) => {
+                const cfg = stored[SETTINGS_KEY] || { ...DEFAULT_SETTINGS };
+                if (!cfg.status) {
+                    cfg.status = true;
+                    chrome.storage.sync.set({ [SETTINGS_KEY]: cfg });
+                }
+            });
+        }
+    } catch {
+        // Silent fallback for standalone execution
+    }
+}
+
+// Alarm for periodic Guardian sync check
+chrome.alarms.create("amngaze-guardian-sync", { periodInMinutes: 0.5 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === "amngaze-guardian-sync") {
+        syncWithAmnShieldGuardian();
+    }
+});
+
